@@ -1,4 +1,6 @@
-# Riquet
+<p align="center">
+  <img src="docs/assets/riquet-banner.png" alt="Riquet — Standalone Schema Registry" width="100%">
+</p>
 
 Riquet is a standalone, Go-based replacement for the Confluent Schema
 Registry. It serves the Confluent v1 REST contract and existing Avro,
