@@ -1,0 +1,42 @@
+name: Publish Helm OCI chart
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing GitHub release version to publish
+        required: true
+        default: 1.0.0
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/setup-helm@v5
+        with:
+          version: v3.18.4
+      - name: Download released chart
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          case "$RELEASE_VERSION" in
+            *[!0-9.]*|'') echo "version must be numeric: $RELEASE_VERSION" >&2; exit 2 ;;
+          esac
+          mkdir -p dist
+          gh release download "v${RELEASE_VERSION}" \
+            --repo "${{ github.repository }}" \
+            --pattern "riquet-${RELEASE_VERSION}.tgz" \
+            --dir dist
+      - name: Log in Helm to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+      - name: Publish chart
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: helm push "dist/riquet-${RELEASE_VERSION}.tgz" oci://ghcr.io/k3rnl/charts

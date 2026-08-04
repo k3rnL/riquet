@@ -16,10 +16,11 @@ the four Riquet binaries. Trivy scans the final image for HIGH and CRITICAL
 findings; a finding blocks release.
 
 Release artifacts are source archives, statically linked Linux binaries for
-amd64 and arm64, a packaged Helm chart, checksums, and the corresponding
-multi-platform GHCR image. Versions follow semantic versioning. Storage formats
-remain readable within 1.x; breaking API or storage changes require a new major
-version and a documented migration path.
+amd64 and arm64, a packaged Helm chart, checksums, the corresponding
+multi-platform GHCR image, and the Helm chart published at
+`oci://ghcr.io/k3rnl/charts/riquet`. Versions follow semantic versioning.
+Storage formats remain readable within 1.x; breaking API or storage changes
+require a new major version and a documented migration path.
 
 `test/release/package.sh v1.0.0` creates the local artifacts. A `v*` tag runs
 the full qualification and acceptance gates before GitHub Actions publishes the

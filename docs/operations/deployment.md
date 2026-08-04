@@ -60,8 +60,8 @@ vulnerabilities in CI.
 ## Helm: PVC profile
 
 ```sh
-helm upgrade --install riquet charts/riquet \
-  --set image.tag=1.0.0 \
+helm upgrade --install riquet oci://ghcr.io/k3rnl/charts/riquet \
+  --version 1.0.0 \
   --set storage.backend=pvc \
   --set storage.pvc.size=5Gi
 ```
@@ -80,8 +80,8 @@ creation. Use a replication factor supported by the cluster:
 kubectl create secret generic riquet-internal \
   --from-literal=internal-token="$(openssl rand -hex 32)"
 
-helm upgrade --install riquet charts/riquet \
-  --set image.tag=1.0.0 \
+helm upgrade --install riquet oci://ghcr.io/k3rnl/charts/riquet \
+  --version 1.0.0 \
   --set storage.backend=kafka \
   --set replicaCount=3 \
   --set 'storage.kafka.brokers[0]=kafka-0.kafka:9092' \
