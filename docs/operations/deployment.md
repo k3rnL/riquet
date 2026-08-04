@@ -49,7 +49,7 @@ contains the server plus `/riquet-backup`, `/riquet-export`, and
 ```sh
 docker run --rm -p 8081:8081 \
   -v riquet-data:/var/lib/riquet \
-  ghcr.io/k3rnl/riquet:1.0.1 \
+  ghcr.io/k3rnl/riquet:1.0.2 \
   --listen :8081 --data /var/lib/riquet/riquet.db
 ```
 
@@ -61,7 +61,7 @@ vulnerabilities in CI.
 
 ```sh
 helm upgrade --install riquet oci://ghcr.io/k3rnl/charts/riquet \
-  --version 1.0.1 \
+  --version 1.0.2 \
   --set storage.backend=pvc \
   --set storage.pvc.size=5Gi
 ```
@@ -80,7 +80,7 @@ Helm uses the chart's default PVC profile:
 releases:
   - name: riquet-registry
     chart: oci://ghcr.io/k3rnl/charts/riquet
-    version: 1.0.1
+    version: 1.0.2
     values:
       - ./riquet-values.yaml
 ```
@@ -97,19 +97,22 @@ Pre-create a one-partition compacted topic, or explicitly enable chart-driven
 creation. Use a replication factor supported by the cluster:
 
 ```sh
-kubectl create secret generic riquet-internal \
-  --from-literal=internal-token="$(openssl rand -hex 32)"
-
 helm upgrade --install riquet oci://ghcr.io/k3rnl/charts/riquet \
-  --version 1.0.1 \
+  --version 1.0.2 \
   --set storage.backend=kafka \
   --set replicaCount=3 \
   --set 'storage.kafka.brokers[0]=kafka-0.kafka:9092' \
   --set 'storage.kafka.brokers[1]=kafka-1.kafka:9092' \
   --set 'storage.kafka.brokers[2]=kafka-2.kafka:9092' \
-  --set storage.kafka.replicationFactor=3 \
-  --set auth.internalTokenSecret.name=riquet-internal
+  --set storage.kafka.replicationFactor=3
 ```
+
+When no internal token Secret is configured, the chart creates
+`<release>-riquet-internal` with a random token and preserves that token across
+upgrades. For externally managed secrets, create a Secret containing the
+`internal-token` key and set `auth.internalTokenSecret.name`. External mode is
+recommended for template-only GitOps workflows that require deterministic
+secret manifests.
 
 Kafka HA has one fenced mutation authority, but any ready replica accepts
 writes and forwards them internally. Reads are local and may lag briefly;

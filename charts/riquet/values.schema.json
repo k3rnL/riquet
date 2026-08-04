@@ -18,6 +18,6 @@
   },
   "allOf": [
     {"if": {"properties": {"storage": {"properties": {"backend": {"const": "pvc"}}}}}, "then": {"properties": {"replicaCount": {"const": 1}}}},
-    {"if": {"properties": {"storage": {"properties": {"backend": {"const": "kafka"}}}}}, "then": {"properties": {"replicaCount": {"minimum": 2}, "storage": {"properties": {"kafka": {"properties": {"brokers": {"minItems": 1}, "replicationFactor": {"minimum": 2}}}}}, "auth": {"properties": {"internalTokenSecret": {"properties": {"name": {"minLength": 1}, "key": {"minLength": 1}}}}}}}}
+    {"if": {"properties": {"storage": {"properties": {"backend": {"const": "kafka"}}}}}, "then": {"properties": {"replicaCount": {"minimum": 2}, "storage": {"properties": {"kafka": {"properties": {"brokers": {"minItems": 1}, "replicationFactor": {"minimum": 2}}}}}, "auth": {"properties": {"internalTokenSecret": {"properties": {"key": {"minLength": 1}}}}}}}}
   ]
 }

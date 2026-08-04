@@ -3,11 +3,13 @@ package helm_test
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -18,14 +20,14 @@ func TestChartLintAndTemplateSnapshots(t *testing.T) {
 	pvc := run(t, "helm", "template", "snapshot", chart)
 	kafka := run(t, "helm", "template", "snapshot", chart,
 		"--values", filepath.Join(chart, "../../test/helm/testdata/kafka-values.yaml"))
-	assertHash(t, pvc, "2d66230c3491b9edc33588cff601479424d64c32583477b261a7f630012bf995")
-	assertHash(t, kafka, "0e51371d13e15181101f6a5b4f3c519db84c37ad6227098f26ba747aa47af542")
+	assertHash(t, pvc, "0738a1450190f0457c47cbac674e9fbdc2649c1193e4f9508531b146512509c5")
+	assertHash(t, kafka, "a785b35639bb203de6cecb7c8010d68a4d523888c2147555b2b582d5ac33f97a")
 	for _, expected := range []string{"kind: StatefulSet", "startupProbe:", "readinessProbe:", "runAsNonRoot: true", "volumeClaimTemplates:"} {
 		if !bytes.Contains(pvc, []byte(expected)) {
 			t.Fatalf("PVC template missing %q", expected)
 		}
 	}
-	for _, expected := range []string{"kind: PodDisruptionBudget", "RIQUET_INTERNAL_TOKEN", "RIQUET_STORAGE_BACKEND, value: \"kafka\"", "replicas: 3", "image: \"registry.example/riquet:1.0.1\"", "emptyDir: {}"} {
+	for _, expected := range []string{"kind: PodDisruptionBudget", "RIQUET_INTERNAL_TOKEN", "RIQUET_STORAGE_BACKEND, value: \"kafka\"", "replicas: 3", "image: \"registry.example/riquet:1.0.2\"", "emptyDir: {}"} {
 		if !bytes.Contains(kafka, []byte(expected)) {
 			t.Fatalf("Kafka template missing %q", expected)
 		}
@@ -34,6 +36,46 @@ func TestChartLintAndTemplateSnapshots(t *testing.T) {
 		if bytes.Contains(kafka, []byte(unexpected)) {
 			t.Fatalf("Kafka template unexpectedly contains %q", unexpected)
 		}
+	}
+}
+
+func TestKafkaInternalTokenSecret(t *testing.T) {
+	chart := chartPath(t)
+	kafkaArguments := []string{
+		"template", "generated", chart,
+		"--set", "storage.backend=kafka",
+		"--set", "replicaCount=3",
+		"--set", "storage.kafka.brokers[0]=kafka:9092",
+	}
+	generated := run(t, "helm", kafkaArguments...)
+	for _, expected := range []string{
+		"kind: Secret",
+		"name: generated-riquet-internal",
+		`secretKeyRef: {name: "generated-riquet-internal", key: "internal-token"}`,
+	} {
+		if !bytes.Contains(generated, []byte(expected)) {
+			t.Fatalf("generated-secret template missing %q", expected)
+		}
+	}
+	match := regexp.MustCompile(`(?m)^  internal-token: "([^"]+)"$`).FindSubmatch(generated)
+	if len(match) != 2 {
+		t.Fatal("generated-secret template does not contain the internal token data key")
+	}
+	token, err := base64.StdEncoding.DecodeString(string(match[1]))
+	if err != nil {
+		t.Fatalf("decode generated internal token: %v", err)
+	}
+	if len(token) != 64 {
+		t.Fatalf("generated internal token length = %d, want 64", len(token))
+	}
+
+	external := run(t, "helm", append(kafkaArguments,
+		"--set", "auth.internalTokenSecret.name=existing-internal")...)
+	if bytes.Contains(external, []byte("kind: Secret")) {
+		t.Fatal("external-secret mode unexpectedly rendered a Secret")
+	}
+	if !bytes.Contains(external, []byte(`secretKeyRef: {name: "existing-internal", key: "internal-token"}`)) {
+		t.Fatal("external-secret mode does not reference the configured Secret")
 	}
 }
 

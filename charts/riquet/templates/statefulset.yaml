@@ -76,7 +76,7 @@ spec:
               valueFrom: {secretKeyRef: {name: {{ .Values.storage.kafka.sasl.secretName | quote }}, key: {{ .Values.storage.kafka.sasl.passwordKey | quote }}}}
             {{- end }}
             - name: RIQUET_INTERNAL_TOKEN
-              valueFrom: {secretKeyRef: {name: {{ .Values.auth.internalTokenSecret.name | quote }}, key: {{ .Values.auth.internalTokenSecret.key | quote }}}}
+              valueFrom: {secretKeyRef: {name: {{ include "riquet.internalTokenSecretName" . | quote }}, key: {{ .Values.auth.internalTokenSecret.key | quote }}}}
             {{- end }}
             {{- if .Values.auth.existingSecret }}
             - name: RIQUET_AUTH_USERNAME

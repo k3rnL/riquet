@@ -43,6 +43,7 @@ auth:
   bearerTokenKey: bearer-token
   adminTokenKey: admin-token
   internalTokenSecret:
+    # Leave empty to let the chart generate and preserve an internal token.
     name: ""
     key: internal-token
 

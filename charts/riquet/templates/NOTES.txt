@@ -6,4 +6,5 @@ Storage profile: {{ .Values.storage.backend }}
 PVC mode is a durable single-writer deployment and intentionally has one replica.
 {{- else }}
 Kafka mode runs {{ .Values.replicaCount }} replicas with fenced mutation authority.
+Internal token Secret: {{ include "riquet.internalTokenSecretName" . }}{{ if not .Values.auth.internalTokenSecret.name }} (managed by this release){{ end }}
 {{- end }}

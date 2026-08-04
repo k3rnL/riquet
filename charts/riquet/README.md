@@ -7,7 +7,7 @@ Install the released chart from GHCR with:
 
 ```sh
 helm upgrade --install riquet oci://ghcr.io/k3rnl/charts/riquet \
-  --version 1.0.1
+  --version 1.0.2
 ```
 
 Validate locally with:

@@ -11,3 +11,10 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 app.kubernetes.io/name: {{ include "riquet.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+{{- define "riquet.internalTokenSecretName" -}}
+{{- if .Values.auth.internalTokenSecret.name -}}
+{{- .Values.auth.internalTokenSecret.name -}}
+{{- else -}}
+{{- printf "%s-internal" (include "riquet.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end }}

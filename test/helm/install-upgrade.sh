@@ -23,17 +23,18 @@ helm upgrade pvc charts/riquet \
 kubectl get pod pvc-riquet-0 -o jsonpath='{.status.containerStatuses[0].ready}' | grep true
 helm uninstall pvc --wait
 
-kubectl create secret generic kafka-internal --from-literal=internal-token=test-only-token
 helm install kafka charts/riquet \
   --set storage.backend=kafka --set replicaCount=2 \
   --set 'storage.kafka.brokers[0]=unreachable.invalid:9092' \
-  --set auth.internalTokenSecret.name=kafka-internal \
   --set image.repository=riquet --set image.tag=helm-test --set image.pullPolicy=Never
 test "$(kubectl get statefulset kafka-riquet -o jsonpath='{.spec.replicas}')" = "2"
+token_before=$(kubectl get secret kafka-riquet-internal -o jsonpath='{.data.internal-token}')
+test -n "$token_before"
 helm upgrade kafka charts/riquet \
   --set storage.backend=kafka --set replicaCount=3 \
   --set 'storage.kafka.brokers[0]=unreachable.invalid:9092' \
-  --set auth.internalTokenSecret.name=kafka-internal \
   --set image.repository=riquet --set image.tag=helm-test --set image.pullPolicy=Never
 test "$(kubectl get statefulset kafka-riquet -o jsonpath='{.spec.replicas}')" = "3"
+token_after=$(kubectl get secret kafka-riquet-internal -o jsonpath='{.data.internal-token}')
+test "$token_after" = "$token_before"
 helm uninstall kafka
