@@ -49,7 +49,7 @@ contains the server plus `/riquet-backup`, `/riquet-export`, and
 ```sh
 docker run --rm -p 8081:8081 \
   -v riquet-data:/var/lib/riquet \
-  ghcr.io/k3rnl/riquet:1.0.0 \
+  ghcr.io/k3rnl/riquet:1.0.1 \
   --listen :8081 --data /var/lib/riquet/riquet.db
 ```
 
@@ -61,7 +61,7 @@ vulnerabilities in CI.
 
 ```sh
 helm upgrade --install riquet oci://ghcr.io/k3rnl/charts/riquet \
-  --version 1.0.0 \
+  --version 1.0.1 \
   --set storage.backend=pvc \
   --set storage.pvc.size=5Gi
 ```
@@ -70,6 +70,26 @@ The chart creates a one-replica StatefulSet, ReadWriteOnce claim, public and
 headless Services, startup/liveness/readiness probes, non-root restricted
 security contexts, resource defaults, and rolling replacement settings. Its
 values schema rejects `replicaCount` other than 1 for PVC.
+
+## Helmfile
+
+Attach the values file under the release's `values` key. If it is omitted,
+Helm uses the chart's default PVC profile:
+
+```yaml
+releases:
+  - name: riquet-registry
+    chart: oci://ghcr.io/k3rnl/charts/riquet
+    version: 1.0.1
+    values:
+      - ./riquet-values.yaml
+```
+
+Confirm the rendered profile before applying it:
+
+```sh
+helmfile template | grep RIQUET_STORAGE_BACKEND
+```
 
 ## Helm: Kafka HA profile
 
@@ -81,7 +101,7 @@ kubectl create secret generic riquet-internal \
   --from-literal=internal-token="$(openssl rand -hex 32)"
 
 helm upgrade --install riquet oci://ghcr.io/k3rnl/charts/riquet \
-  --version 1.0.0 \
+  --version 1.0.1 \
   --set storage.backend=kafka \
   --set replicaCount=3 \
   --set 'storage.kafka.brokers[0]=kafka-0.kafka:9092' \

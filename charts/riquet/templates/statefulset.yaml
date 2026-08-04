@@ -45,7 +45,9 @@ spec:
             - {name: RIQUET_HEALTH_ADDRESS, value: ":8082"}
             - {name: RIQUET_METRICS_ADDRESS, value: ":9090"}
             - {name: RIQUET_STORAGE_BACKEND, value: {{ .Values.storage.backend | quote }}}
+            {{- if eq .Values.storage.backend "pvc" }}
             - {name: RIQUET_DATA_PATH, value: "/var/lib/riquet/riquet.db"}
+            {{- end }}
             - {name: RIQUET_AUTH_MODE, value: {{ .Values.auth.mode | quote }}}
             {{- if eq .Values.storage.backend "kafka" }}
             - {name: POD_NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
@@ -104,7 +106,9 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+            {{- if eq .Values.storage.backend "pvc" }}
             - {name: data, mountPath: /var/lib/riquet}
+            {{- end }}
             - {name: tmp, mountPath: /tmp}
             {{- if and (eq .Values.storage.backend "kafka") .Values.storage.kafka.tls.enabled }}
             - {name: kafka-tls, mountPath: /etc/riquet/kafka-tls, readOnly: true}
@@ -112,14 +116,10 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
-        {{- if eq .Values.storage.backend "kafka" }}
-        - name: data
-          emptyDir: {}
-        {{- if .Values.storage.kafka.tls.enabled }}
+        {{- if and (eq .Values.storage.backend "kafka") .Values.storage.kafka.tls.enabled }}
         - name: kafka-tls
           secret:
             secretName: {{ .Values.storage.kafka.tls.secretName }}
-        {{- end }}
         {{- end }}
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}

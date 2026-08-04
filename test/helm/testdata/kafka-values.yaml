@@ -1,0 +1,19 @@
+replicaCount: 3
+
+image:
+  repository: registry.example/riquet
+  tag: 1.0.1
+
+storage:
+  backend: kafka
+  kafka:
+    brokers:
+      - kafka-0.kafka:9092
+      - kafka-1.kafka:9092
+      - kafka-2.kafka:9092
+    replicationFactor: 3
+    autoCreateTopic: true
+
+auth:
+  internalTokenSecret:
+    name: riquet-internal

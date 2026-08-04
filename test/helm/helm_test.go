@@ -17,18 +17,22 @@ func TestChartLintAndTemplateSnapshots(t *testing.T) {
 	run(t, "helm", "lint", chart)
 	pvc := run(t, "helm", "template", "snapshot", chart)
 	kafka := run(t, "helm", "template", "snapshot", chart,
-		"--set", "storage.backend=kafka", "--set", "replicaCount=3",
-		"--set", "storage.kafka.brokers[0]=kafka:9092", "--set", "auth.internalTokenSecret.name=riquet-internal")
-	assertHash(t, pvc, "fde2adc57c36d7c147f5f53ec4a911ccd33ab486d795395dc133e8814a41fc93")
-	assertHash(t, kafka, "ccfa833fb38944fec6d48fb6761876904e56f9d8acd397e5de52b21528b1f8ca")
+		"--values", filepath.Join(chart, "../../test/helm/testdata/kafka-values.yaml"))
+	assertHash(t, pvc, "2d66230c3491b9edc33588cff601479424d64c32583477b261a7f630012bf995")
+	assertHash(t, kafka, "0e51371d13e15181101f6a5b4f3c519db84c37ad6227098f26ba747aa47af542")
 	for _, expected := range []string{"kind: StatefulSet", "startupProbe:", "readinessProbe:", "runAsNonRoot: true", "volumeClaimTemplates:"} {
 		if !bytes.Contains(pvc, []byte(expected)) {
 			t.Fatalf("PVC template missing %q", expected)
 		}
 	}
-	for _, expected := range []string{"kind: PodDisruptionBudget", "RIQUET_INTERNAL_TOKEN", "replicas: 3", "emptyDir: {}"} {
+	for _, expected := range []string{"kind: PodDisruptionBudget", "RIQUET_INTERNAL_TOKEN", "RIQUET_STORAGE_BACKEND, value: \"kafka\"", "replicas: 3", "image: \"registry.example/riquet:1.0.1\"", "emptyDir: {}"} {
 		if !bytes.Contains(kafka, []byte(expected)) {
 			t.Fatalf("Kafka template missing %q", expected)
+		}
+	}
+	for _, unexpected := range []string{"volumeClaimTemplates:", "RIQUET_DATA_PATH", "name: data"} {
+		if bytes.Contains(kafka, []byte(unexpected)) {
+			t.Fatalf("Kafka template unexpectedly contains %q", unexpected)
 		}
 	}
 }
