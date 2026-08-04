@@ -1,0 +1,47 @@
+name: Confluent compatibility drift
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      oracle_version:
+        description: Confluent Platform version to probe
+        required: false
+        default: latest
+
+permissions:
+  contents: read
+
+jobs:
+  latest:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Record requested drift target
+        run: |
+          mkdir -p test/e2e/artifacts
+          printf '%s\n' "${{ inputs.oracle_version || 'latest' }}" > test/e2e/artifacts/requested-oracle-version.txt
+      - name: Select latest drift images
+        run: |
+          VERSION="${{ inputs.oracle_version || 'latest' }}"
+          echo "RIQUET_ORACLE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "RIQUET_SCHEMA_REGISTRY_IMAGE=confluentinc/cp-schema-registry:${VERSION}" >> "$GITHUB_ENV"
+          echo "RIQUET_KAFKA_IMAGE=confluentinc/cp-kafka:${VERSION}" >> "$GITHUB_ENV"
+      - name: Run latest oracle drift probe
+        working-directory: test/e2e
+        env:
+          RIQUET_TEST_ARTIFACTS: artifacts
+        run: go test -tags=e2e -run TestPinnedOracleDiscovery -v .
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: compatibility-drift-report
+          path: test/e2e/artifacts
+          if-no-files-found: ignore

@@ -1,0 +1,38 @@
+name: Release candidate qualification
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*-rc.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: azure/setup-helm@v5
+      - name: Install Kubernetes schema validator
+        run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
+      - name: Install kind
+        run: go install sigs.k8s.io/kind@v0.29.0
+      - name: Run complete release qualification
+        run: test/release/qualify.sh
+      - name: Run clean-install acceptance
+        run: test/release/acceptance.sh
+      - name: Build release image
+        run: docker build --build-arg VERSION=${GITHUB_REF_NAME:-rc} --build-arg COMMIT=$GITHUB_SHA --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) -t riquet:rc .
+      - name: Install checksum-pinned Trivy
+        run: |
+          curl -fsSLO https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_Linux-64bit.tar.gz
+          echo '8b4376d5d6befe5c24d503f10ff136d9e0c49f9127a4279fd110b727929a5aa9  trivy_0.70.0_Linux-64bit.tar.gz' | sha256sum -c -
+          tar -xzf trivy_0.70.0_Linux-64bit.tar.gz trivy
+      - name: Scan release image
+        run: ./trivy image --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed riquet:rc

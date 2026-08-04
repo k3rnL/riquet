@@ -1,0 +1,48 @@
+name: Pinned compatibility oracle
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  oracle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Validate harness and scenarios
+        run: go test ./internal/contract ./test/e2e
+      - name: Run pinned Confluent discovery suite
+        working-directory: test/e2e
+        env:
+          RIQUET_TEST_ARTIFACTS: artifacts
+          RIQUET_ORACLE_VERSION: 8.3.0
+        run: go test -tags=e2e -run TestPinnedOracleDiscovery -v .
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pinned-oracle-diagnostics
+          path: test/e2e/artifacts
+          if-no-files-found: ignore
+
+  kafka-ha:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run pinned Kafka storage and HA certification
+        working-directory: test/e2e
+        run: go test -tags=e2e -run '^TestKafka' -count=1 -v .

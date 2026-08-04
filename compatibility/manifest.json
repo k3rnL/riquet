@@ -1,0 +1,69 @@
+{
+  "$schema": "./manifest.schema.json",
+  "manifestVersion": 1,
+  "oracle": {
+    "product": "Confluent Platform Schema Registry",
+    "version": "8.3.0",
+    "image": "confluentinc/cp-schema-registry",
+    "digest": "sha256:d9e6f3d1142598906a51dca66b8b1251bb0bc24ba7faae1836d7c642fc4d70ea",
+    "required": true,
+    "latestPolicy": "scheduled-report-only"
+  },
+  "api": {
+    "family": "Confluent Schema Registry",
+    "version": "v1",
+    "endpoints": [
+      {"method":"GET","path":"/schemas/types","status":"supported","scenarios":["avro-api","core-registration"]},
+      {"method":"GET","path":"/schemas/ids/{id}","status":"supported","scenarios":["avro-api"]},
+      {"method":"GET","path":"/schemas/ids/{id}/schema","status":"supported","scenarios":["avro-api"]},
+      {"method":"GET","path":"/schemas/ids/{id}/versions","status":"supported","scenarios":["avro-api"]},
+      {"method":"GET","path":"/subjects","status":"supported","scenarios":["avro-api"]},
+      {"method":"POST","path":"/subjects/{subject}","status":"supported","scenarios":["avro-api","protobuf-api","json-api"]},
+      {"method":"GET","path":"/subjects/{subject}/versions","status":"supported","scenarios":["avro-api","core-registration"]},
+      {"method":"POST","path":"/subjects/{subject}/versions","status":"supported","scenarios":["avro-api","protobuf-api","json-api","core-registration","errors-and-deletion"]},
+      {"method":"GET","path":"/subjects/{subject}/versions/{version}","status":"supported","scenarios":["avro-api","protobuf-api","json-api","errors-and-deletion"]},
+      {"method":"DELETE","path":"/subjects/{subject}/versions/{version}","status":"supported","scenarios":["avro-api"]},
+      {"method":"GET","path":"/subjects/{subject}/versions/{version}/referencedby","status":"supported","scenarios":["avro-api","protobuf-api","json-api"]},
+      {"method":"DELETE","path":"/subjects/{subject}","status":"supported","scenarios":["avro-api","errors-and-deletion"]},
+      {"method":"GET","path":"/config","status":"supported","scenarios":["avro-api"]},
+      {"method":"PUT","path":"/config","status":"supported","scenarios":["avro-api"]},
+      {"method":"GET","path":"/config/{subject}","status":"supported","scenarios":["avro-api"]},
+      {"method":"PUT","path":"/config/{subject}","status":"supported","scenarios":["avro-api"]},
+      {"method":"DELETE","path":"/config/{subject}","status":"supported","scenarios":["avro-api"]},
+      {"method":"GET","path":"/mode","status":"supported","scenarios":["avro-api"]},
+      {"method":"PUT","path":"/mode","status":"supported","scenarios":["avro-api"]},
+      {"method":"GET","path":"/mode/{subject}","status":"supported","scenarios":["avro-api"]},
+      {"method":"PUT","path":"/mode/{subject}","status":"supported","scenarios":["avro-api"]},
+      {"method":"DELETE","path":"/mode/{subject}","status":"supported","scenarios":["avro-api"]},
+      {"method":"POST","path":"/compatibility/subjects/{subject}/versions/{version}","status":"supported","scenarios":["avro-api","protobuf-api","json-api","avro-evolution","protobuf-evolution","json-evolution"]}
+    ]
+  },
+  "schemaFormats": [
+    {"name": "AVRO", "status": "supported"},
+    {"name": "PROTOBUF", "status": "supported"},
+    {"name": "JSON", "status": "supported"}
+  ],
+  "clients": [
+    {"name":"Confluent Java SerDes","version":"8.3.0","status":"supported","scenarios":["java-serdes-avro-protobuf-json-references"]},
+    {"name":"franz-go Schema Registry client","version":"1.3.0","status":"supported","scenarios":["go-client-wire-envelope"]},
+    {"name":"Confluent Python client","version":"2.12.2","status":"supported","scenarios":["python-avro-wire-envelope"]},
+    {"name":"Confluent .NET client","version":"2.12.0","status":"supported","scenarios":["dotnet-avro-wire-envelope"]},
+    {"name":"Confluent Kafka Connect AvroConverter","version":"8.3.0","status":"supported","scenarios":["kafka-connect-avro-converter"]}
+  ],
+  "brokers": [
+    {
+      "name": "Confluent Platform Kafka",
+      "version": "8.3.0",
+      "status": "supported",
+      "scenarios": ["kafka-storage-conformance", "kafka-primary-election", "kafka-fault-recovery"]
+    }
+  ],
+  "exceptions": [
+    {
+      "id": "parser-diagnostic-wording",
+      "versions": ["8.3.0"],
+      "scenario": "errors-and-deletion:malformed registration",
+      "rationale": "Riquet matches the HTTP status, numeric error code, response shape, and atomic behavior but emits bounded Go parser diagnostics instead of Confluent's Java exception text."
+    }
+  ]
+}

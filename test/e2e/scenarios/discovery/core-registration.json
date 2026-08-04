@@ -1,0 +1,32 @@
+{
+  "name": "core-registration",
+  "steps": [
+    {
+      "name": "list schema types",
+      "method": "GET",
+      "path": "/schemas/types",
+      "expect": {"status": 200}
+    },
+    {
+      "name": "register avro schema",
+      "method": "POST",
+      "path": "/subjects/discovery-value/versions",
+      "headers": {"Accept": ["application/vnd.schemaregistry.v1+json"]},
+      "body": {"schema": "{\"type\":\"string\"}"},
+      "expect": {"status": 200}
+    },
+    {
+      "name": "register duplicate",
+      "method": "POST",
+      "path": "/subjects/discovery-value/versions",
+      "body": {"schema": "{\"type\":\"string\"}"},
+      "expect": {"status": 200}
+    },
+    {
+      "name": "list versions",
+      "method": "GET",
+      "path": "/subjects/discovery-value/versions",
+      "expect": {"status": 200, "json": [1]}
+    }
+  ]
+}

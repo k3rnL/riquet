@@ -1,0 +1,144 @@
+{{- if and .Values.storage.kafka.tls.enabled (not .Values.storage.kafka.tls.secretName) }}{{ fail "storage.kafka.tls.secretName is required when Kafka TLS is enabled" }}{{ end -}}
+{{- if and .Values.storage.kafka.sasl.mechanism (not .Values.storage.kafka.sasl.secretName) }}{{ fail "storage.kafka.sasl.secretName is required when Kafka SASL is enabled" }}{{ end -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "riquet.fullname" . }}
+  labels:
+    {{- include "riquet.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "riquet.fullname" . }}-headless
+  replicas: {{ .Values.replicaCount }}
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "riquet.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "riquet.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      containers:
+        - name: riquet
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - {name: RIQUET_PUBLIC_ADDRESS, value: ":8081"}
+            - {name: RIQUET_INTERNAL_ADDRESS, value: ":8083"}
+            - {name: RIQUET_HEALTH_ADDRESS, value: ":8082"}
+            - {name: RIQUET_METRICS_ADDRESS, value: ":9090"}
+            - {name: RIQUET_STORAGE_BACKEND, value: {{ .Values.storage.backend | quote }}}
+            - {name: RIQUET_DATA_PATH, value: "/var/lib/riquet/riquet.db"}
+            - {name: RIQUET_AUTH_MODE, value: {{ .Values.auth.mode | quote }}}
+            {{- if eq .Values.storage.backend "kafka" }}
+            - {name: POD_NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+            - {name: POD_NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}
+            - {name: RIQUET_REPLICA_ID, value: "$(POD_NAME)"}
+            - {name: RIQUET_INTERNAL_ADVERTISE_URL, value: "http://$(POD_NAME).{{ include "riquet.fullname" . }}-headless.$(POD_NAMESPACE).svc:8083"}
+            - {name: RIQUET_KAFKA_BROKERS, value: {{ join "," .Values.storage.kafka.brokers | quote }}}
+            - {name: RIQUET_KAFKA_TOPIC, value: {{ .Values.storage.kafka.topic | quote }}}
+            - {name: RIQUET_KAFKA_TRANSACTIONAL_ID, value: {{ .Values.storage.kafka.transactionalId | quote }}}
+            - {name: RIQUET_KAFKA_GROUP_ID, value: {{ .Values.storage.kafka.groupId | quote }}}
+            - {name: RIQUET_KAFKA_REPLICATION_FACTOR, value: {{ .Values.storage.kafka.replicationFactor | quote }}}
+            - {name: RIQUET_KAFKA_AUTO_CREATE_TOPIC, value: {{ .Values.storage.kafka.autoCreateTopic | quote }}}
+            - {name: RIQUET_MAX_READY_LAG, value: {{ .Values.storage.kafka.maxReadyLag | quote }}}
+            - {name: RIQUET_KAFKA_TLS_ENABLED, value: {{ .Values.storage.kafka.tls.enabled | quote }}}
+            {{- if .Values.storage.kafka.tls.enabled }}
+            - {name: RIQUET_KAFKA_TLS_CA_FILE, value: "/etc/riquet/kafka-tls/{{ .Values.storage.kafka.tls.caKey }}"}
+            - {name: RIQUET_KAFKA_TLS_CERT_FILE, value: "/etc/riquet/kafka-tls/{{ .Values.storage.kafka.tls.certKey }}"}
+            - {name: RIQUET_KAFKA_TLS_KEY_FILE, value: "/etc/riquet/kafka-tls/{{ .Values.storage.kafka.tls.keyKey }}"}
+            - {name: RIQUET_KAFKA_TLS_SERVER_NAME, value: {{ .Values.storage.kafka.tls.serverName | quote }}}
+            {{- end }}
+            {{- if .Values.storage.kafka.sasl.mechanism }}
+            - {name: RIQUET_KAFKA_SASL_MECHANISM, value: {{ .Values.storage.kafka.sasl.mechanism | quote }}}
+            - name: RIQUET_KAFKA_SASL_USERNAME
+              valueFrom: {secretKeyRef: {name: {{ .Values.storage.kafka.sasl.secretName | quote }}, key: {{ .Values.storage.kafka.sasl.usernameKey | quote }}}}
+            - name: RIQUET_KAFKA_SASL_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ .Values.storage.kafka.sasl.secretName | quote }}, key: {{ .Values.storage.kafka.sasl.passwordKey | quote }}}}
+            {{- end }}
+            - name: RIQUET_INTERNAL_TOKEN
+              valueFrom: {secretKeyRef: {name: {{ .Values.auth.internalTokenSecret.name | quote }}, key: {{ .Values.auth.internalTokenSecret.key | quote }}}}
+            {{- end }}
+            {{- if .Values.auth.existingSecret }}
+            - name: RIQUET_AUTH_USERNAME
+              valueFrom: {secretKeyRef: {name: {{ .Values.auth.existingSecret | quote }}, key: {{ .Values.auth.usernameKey | quote }}, optional: true}}
+            - name: RIQUET_AUTH_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ .Values.auth.existingSecret | quote }}, key: {{ .Values.auth.passwordKey | quote }}, optional: true}}
+            - name: RIQUET_AUTH_BEARER_TOKEN
+              valueFrom: {secretKeyRef: {name: {{ .Values.auth.existingSecret | quote }}, key: {{ .Values.auth.bearerTokenKey | quote }}, optional: true}}
+            - name: RIQUET_ADMIN_TOKEN
+              valueFrom: {secretKeyRef: {name: {{ .Values.auth.existingSecret | quote }}, key: {{ .Values.auth.adminTokenKey | quote }}, optional: true}}
+            {{- end }}
+          ports:
+            - {name: http, containerPort: 8081}
+            - {name: health, containerPort: 8082}
+            - {name: internal, containerPort: 8083}
+            - {name: metrics, containerPort: 9090}
+          startupProbe:
+            httpGet: {path: /health/startup, port: health}
+            failureThreshold: 60
+            periodSeconds: 2
+          livenessProbe:
+            httpGet: {path: /health/live, port: health}
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /health/ready, port: health}
+            periodSeconds: 2
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/riquet}
+            - {name: tmp, mountPath: /tmp}
+            {{- if and (eq .Values.storage.backend "kafka") .Values.storage.kafka.tls.enabled }}
+            - {name: kafka-tls, mountPath: /etc/riquet/kafka-tls, readOnly: true}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if eq .Values.storage.backend "kafka" }}
+        - name: data
+          emptyDir: {}
+        {{- if .Values.storage.kafka.tls.enabled }}
+        - name: kafka-tls
+          secret:
+            secretName: {{ .Values.storage.kafka.tls.secretName }}
+        {{- end }}
+        {{- end }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.topologySpreadConstraints | nindent 8 }}
+  {{- if eq .Values.storage.backend "pvc" }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: {{ toJson .Values.storage.pvc.accessModes }}
+        {{- with .Values.storage.pvc.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.pvc.size }}
+  {{- end }}

@@ -1,0 +1,45 @@
+{
+  "name": "avro-api",
+  "steps": [
+    {"name":"types","method":"GET","path":"/schemas/types","expect":{"status":200}},
+    {"name":"empty subjects","method":"GET","path":"/subjects","expect":{"status":200,"json":[]}},
+    {"name":"register first subject","method":"POST","path":"/subjects/api-a/versions","body":{"schema":"{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"}]}"},"expect":{"status":200}},
+    {"name":"register same identity under second subject","method":"POST","path":"/subjects/api-b/versions?normalize=true","body":{"schema":"{ \"fields\": [{\"type\":\"long\",\"name\":\"id\"}], \"name\":\"Event\", \"type\":\"record\" }"},"expect":{"status":200}},
+    {"name":"schema by global id","method":"GET","path":"/schemas/ids/1","expect":{"status":200}},
+    {"name":"raw schema by global id","method":"GET","path":"/schemas/ids/1/schema","expect":{"status":200}},
+    {"name":"versions by global id","method":"GET","path":"/schemas/ids/1/versions","expect":{"status":200}},
+    {"name":"lookup schema under subject","method":"POST","path":"/subjects/api-a?normalize=true","body":{"schema":"{\"fields\":[{\"name\":\"id\",\"type\":\"long\"}],\"name\":\"Event\",\"type\":\"record\"}"},"expect":{"status":200}},
+    {"name":"get exact version","method":"GET","path":"/subjects/api-a/versions/1","expect":{"status":200}},
+    {"name":"get latest version","method":"GET","path":"/subjects/api-a/versions/latest","expect":{"status":200}},
+    {"name":"list subjects","method":"GET","path":"/subjects","expect":{"status":200}},
+    {"name":"list versions","method":"GET","path":"/subjects/api-a/versions","expect":{"status":200,"json":[1]}},
+
+    {"name":"set global config none","method":"PUT","path":"/config","body":{"compatibility":"NONE"},"expect":{"status":200}},
+    {"name":"get global config","method":"GET","path":"/config","expect":{"status":200}},
+    {"name":"set subject config full","method":"PUT","path":"/config/api-a","body":{"compatibility":"FULL"},"expect":{"status":200}},
+    {"name":"get subject config","method":"GET","path":"/config/api-a","expect":{"status":200}},
+    {"name":"inherit global config","method":"GET","path":"/config/api-b?defaultToGlobal=true","expect":{"status":200}},
+    {"name":"test compatible schema","method":"POST","path":"/compatibility/subjects/api-a/versions/latest?verbose=true","body":{"schema":"{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"}]}"},"expect":{"status":200}},
+    {"name":"delete subject config","method":"DELETE","path":"/config/api-a","expect":{"status":200}},
+    {"name":"restore global config","method":"PUT","path":"/config","body":{"compatibility":"BACKWARD"},"expect":{"status":200}},
+
+    {"name":"set subject import mode","method":"PUT","path":"/mode/imported","body":{"mode":"IMPORT"},"expect":{"status":200}},
+    {"name":"get subject mode","method":"GET","path":"/mode/imported","expect":{"status":200}},
+    {"name":"import explicit identifiers","method":"POST","path":"/subjects/imported/versions","body":{"schema":"\"bytes\"","id":42,"version":3},"expect":{"status":200}},
+    {"name":"delete subject mode","method":"DELETE","path":"/mode/imported","expect":{"status":200}},
+    {"name":"set global readonly","method":"PUT","path":"/mode","body":{"mode":"READONLY"},"expect":{"status":200}},
+    {"name":"get global readonly","method":"GET","path":"/mode","expect":{"status":200}},
+    {"name":"readonly rejects registration","method":"POST","path":"/subjects/blocked/versions","body":{"schema":"\"string\""},"expect":{"status":422}},
+    {"name":"restore global readwrite","method":"PUT","path":"/mode","body":{"mode":"READWRITE"},"expect":{"status":200}},
+
+    {"name":"register referenced schema","method":"POST","path":"/subjects/ref-base/versions","body":{"schema":"{\"type\":\"record\",\"name\":\"Common\",\"namespace\":\"example\",\"fields\":[]}"},"expect":{"status":200}},
+    {"name":"register referring schema","method":"POST","path":"/subjects/ref-dependent/versions","body":{"schema":"{\"type\":\"record\",\"name\":\"Envelope\",\"namespace\":\"example\",\"fields\":[{\"name\":\"common\",\"type\":\"example.Common\"}]}","references":[{"name":"example.Common","subject":"ref-base","version":1}]},"expect":{"status":200}},
+    {"name":"discover reverse references","method":"GET","path":"/subjects/ref-base/versions/1/referencedby","expect":{"status":200}},
+    {"name":"soft delete referring version","method":"DELETE","path":"/subjects/ref-dependent/versions/1","expect":{"status":200,"json":1}},
+    {"name":"permanent delete referring version","method":"DELETE","path":"/subjects/ref-dependent/versions/1?permanent=true","expect":{"status":200,"json":1}},
+    {"name":"soft delete referenced subject","method":"DELETE","path":"/subjects/ref-base","expect":{"status":200,"json":[1]}},
+    {"name":"list deleted referenced version","method":"GET","path":"/subjects/ref-base/versions?deleted=true","expect":{"status":200,"json":[1]}},
+    {"name":"permanent delete referenced subject","method":"DELETE","path":"/subjects/ref-base?permanent=true","expect":{"status":200,"json":[1]}},
+    {"name":"deleted subject is gone","method":"GET","path":"/subjects/ref-base/versions?deleted=true","expect":{"status":404}}
+  ]
+}

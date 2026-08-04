@@ -1,0 +1,12 @@
+{
+  "name": "protobuf-api",
+  "steps": [
+    {"name":"register protobuf","method":"POST","path":"/subjects/proto-value/versions","body":{"schemaType":"PROTOBUF","schema":"syntax = \"proto3\"; package example; message Event { int64 id = 1; }"},"expect":{"status":200}},
+    {"name":"get protobuf version","method":"GET","path":"/subjects/proto-value/versions/1","expect":{"status":200}},
+    {"name":"lookup protobuf","method":"POST","path":"/subjects/proto-value","body":{"schemaType":"PROTOBUF","schema":"syntax=\"proto3\";package example;message Event{int64 id=1;}"},"expect":{"status":200}},
+    {"name":"protobuf compatibility","method":"POST","path":"/compatibility/subjects/proto-value/versions/latest?verbose=true","body":{"schemaType":"PROTOBUF","schema":"syntax = \"proto3\"; package example; message Event { int64 id = 1; string note = 2; }"},"expect":{"status":200}},
+    {"name":"register protobuf reference","method":"POST","path":"/subjects/proto-common/versions","body":{"schemaType":"PROTOBUF","schema":"syntax = \"proto3\"; package example; message Common { string value = 1; }"},"expect":{"status":200}},
+    {"name":"register protobuf import","method":"POST","path":"/subjects/proto-envelope/versions","body":{"schemaType":"PROTOBUF","schema":"syntax = \"proto3\"; package example; import \"common.proto\"; message Envelope { Common common = 1; }","references":[{"name":"common.proto","subject":"proto-common","version":1}]},"expect":{"status":200}},
+    {"name":"protobuf reverse reference","method":"GET","path":"/subjects/proto-common/versions/1/referencedby","expect":{"status":200}}
+  ]
+}

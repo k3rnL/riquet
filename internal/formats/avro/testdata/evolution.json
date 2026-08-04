@@ -1,0 +1,95 @@
+[
+  {
+    "name": "none accepts a type change",
+    "level": "NONE",
+    "previous": ["\"string\""],
+    "candidate": "\"long\"",
+    "compatible": true
+  },
+  {
+    "name": "backward rejects a new required field",
+    "level": "BACKWARD",
+    "previous": ["{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"}]}"],
+    "candidate": "{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"name\",\"type\":\"string\"}]}",
+    "compatible": false
+  },
+  {
+    "name": "backward transitive checks older writers",
+    "level": "BACKWARD_TRANSITIVE",
+    "previous": ["{\"type\":\"record\",\"name\":\"Metric\",\"fields\":[{\"name\":\"value\",\"type\":\"string\"}]}", "{\"type\":\"record\",\"name\":\"Metric\",\"fields\":[{\"name\":\"value\",\"type\":\"long\"}]}"],
+    "candidate": "{\"type\":\"record\",\"name\":\"Metric\",\"fields\":[{\"name\":\"value\",\"type\":\"long\"},{\"name\":\"label\",\"type\":\"string\",\"default\":\"\"}]}",
+    "compatible": false
+  },
+  {
+    "name": "forward accepts a new writer field",
+    "level": "FORWARD",
+    "previous": ["{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"}]}"],
+    "candidate": "{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"name\",\"type\":\"string\"}]}",
+    "compatible": true
+  },
+  {
+    "name": "forward transitive checks older readers",
+    "level": "FORWARD_TRANSITIVE",
+    "previous": ["{\"type\":\"record\",\"name\":\"Metric\",\"fields\":[{\"name\":\"value\",\"type\":\"int\"}]}", "{\"type\":\"record\",\"name\":\"Metric\",\"fields\":[{\"name\":\"value\",\"type\":\"long\"}]}"],
+    "candidate": "{\"type\":\"record\",\"name\":\"Metric\",\"fields\":[{\"name\":\"value\",\"type\":\"long\"},{\"name\":\"label\",\"type\":\"string\",\"default\":\"\"}]}",
+    "compatible": false
+  },
+  {
+    "name": "full accepts a field with a default",
+    "level": "FULL",
+    "previous": ["{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"}]}"],
+    "candidate": "{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"name\",\"type\":\"string\",\"default\":\"\"}]}",
+    "compatible": true
+  },
+  {
+    "name": "full transitive accepts an optional field across history",
+    "level": "FULL_TRANSITIVE",
+    "previous": ["{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"}]}", "{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"name\",\"type\":\"string\",\"default\":\"unknown\"}]}"],
+    "candidate": "{\"type\":\"record\",\"name\":\"Event\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"name\",\"type\":\"string\",\"default\":\"\"}]}",
+    "compatible": true
+  },
+  {
+    "name": "record alias resolves an old name",
+    "level": "BACKWARD",
+    "previous": ["{\"type\":\"record\",\"name\":\"OldEvent\",\"fields\":[]}"],
+    "candidate": "{\"type\":\"record\",\"name\":\"Event\",\"aliases\":[\"OldEvent\"],\"fields\":[]}",
+    "compatible": true
+  },
+  {
+    "name": "reader union contains the writer branch",
+    "level": "BACKWARD",
+    "previous": ["\"int\""],
+    "candidate": "[\"int\",\"long\"]",
+    "compatible": true
+  },
+  {
+    "name": "enum reader default handles a removed symbol",
+    "level": "BACKWARD",
+    "previous": ["{\"type\":\"enum\",\"name\":\"State\",\"symbols\":[\"A\",\"B\"]}"],
+    "candidate": "{\"type\":\"enum\",\"name\":\"State\",\"symbols\":[\"A\"],\"default\":\"A\"}",
+    "compatible": true
+  },
+  {
+    "name": "fixed size cannot change",
+    "level": "FULL",
+    "previous": ["{\"type\":\"fixed\",\"name\":\"Token\",\"size\":4}"],
+    "candidate": "{\"type\":\"fixed\",\"name\":\"Token\",\"size\":8}",
+    "compatible": false
+  },
+  {
+    "name": "normalized property order is compatible",
+    "level": "FULL",
+    "previous": ["{\"type\":\"record\",\"name\":\"Ordered\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"}]}"],
+    "candidate": "{ \"fields\": [{\"type\":\"long\",\"name\":\"id\"}], \"name\":\"Ordered\", \"type\":\"record\" }",
+    "compatible": true
+  },
+  {
+    "name": "external named reference participates in evolution",
+    "level": "BACKWARD",
+    "references": [{"name": "example.Common", "subject": "common", "version": 1}],
+    "referenceSchemas": {"common": "{\"type\":\"record\",\"name\":\"Common\",\"namespace\":\"example\",\"fields\":[]}"},
+    "previous": ["{\"type\":\"record\",\"name\":\"Envelope\",\"namespace\":\"example\",\"fields\":[{\"name\":\"common\",\"type\":\"example.Common\"}]}"],
+    "candidate": "{\"type\":\"record\",\"name\":\"Envelope\",\"namespace\":\"example\",\"fields\":[{\"name\":\"common\",\"type\":\"example.Common\"},{\"name\":\"note\",\"type\":\"string\",\"default\":\"\"}]}",
+    "compatible": true
+  }
+]

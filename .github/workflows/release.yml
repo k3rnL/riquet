@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  qualify:
+    if: ${{ !contains(github.ref_name, '-rc.') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: azure/setup-helm@v5
+      - name: Install release tools
+        run: |
+          go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
+          go install sigs.k8s.io/kind@v0.29.0
+      - name: Qualify release candidate
+        run: test/release/qualify.sh
+      - name: Clean-install acceptance
+        run: test/release/acceptance.sh
+
+  publish:
+    if: ${{ !contains(github.ref_name, '-rc.') }}
+    needs: qualify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: azure/setup-helm@v5
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build release artifacts
+        run: test/release/package.sh "${GITHUB_REF_NAME}" dist
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/k3rnl/riquet:${{ github.ref_name }}
+            ghcr.io/k3rnl/riquet:1.0.0
+            ghcr.io/k3rnl/riquet:latest
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ github.sha }}
+          provenance: true
+          sbom: true
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "Riquet ${GITHUB_REF_NAME}"

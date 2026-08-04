@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Format
+        run: make fmt-check
+      - name: Vet
+        run: go vet ./...
+      - name: Dependency licenses
+        run: test/release/license-audit.sh
+      - name: Unit tests
+        run: make test
+      - name: Race tests
+        run: make test-race
+      - name: Generated files
+        run: make generate-check
+      - name: Build
+        run: make build
+      - name: Lint
+        env:
+          GOTOOLCHAIN: go1.26.5
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run ./...
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          platforms: linux/amd64,linux/arm64
+          tags: riquet:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  image-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: riquet:test
+      - name: Install checksum-pinned Trivy
+        run: |
+          curl -fsSLO https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_Linux-64bit.tar.gz
+          echo '8b4376d5d6befe5c24d503f10ff136d9e0c49f9127a4279fd110b727929a5aa9  trivy_0.70.0_Linux-64bit.tar.gz' | sha256sum -c -
+          tar -xzf trivy_0.70.0_Linux-64bit.tar.gz trivy
+      - name: Scan image
+        run: ./trivy image --exit-code 1 --severity CRITICAL,HIGH --ignore-unfixed riquet:test
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: azure/setup-helm@v5
+      - name: Install Kubernetes schema validator
+        run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.7.0
+      - name: Lint, snapshot, values, and Kubernetes schema tests
+        run: go test ./test/helm -v

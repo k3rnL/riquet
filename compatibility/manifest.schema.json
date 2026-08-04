@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://riquet.dev/schemas/compatibility-manifest-v1.json",
+  "title": "Riquet compatibility manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifestVersion", "oracle", "api", "schemaFormats", "clients", "brokers", "exceptions"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "manifestVersion": {"const": 1},
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "version", "image", "digest", "required", "latestPolicy"],
+      "properties": {
+        "product": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "image": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "required": {"type": "boolean"},
+        "latestPolicy": {"enum": ["scheduled-report-only", "required"]}
+      }
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "version", "endpoints"],
+      "properties": {
+        "family": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["method", "path", "status", "scenarios"],
+            "properties": {
+              "method": {"enum": ["GET", "POST", "PUT", "DELETE"]},
+              "path": {"type": "string", "pattern": "^/"},
+              "status": {"$ref": "#/$defs/status"},
+              "scenarios": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+            }
+          }
+        }
+      }
+    },
+    "schemaFormats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status"],
+        "properties": {
+          "name": {"enum": ["AVRO", "PROTOBUF", "JSON"]},
+          "status": {"$ref": "#/$defs/status"}
+        }
+      }
+    },
+    "clients": {"type": "array", "items": {"$ref": "#/$defs/certification"}},
+    "brokers": {"type": "array", "items": {"$ref": "#/$defs/certification"}},
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "versions", "scenario", "rationale"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "versions": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+          "scenario": {"type": "string", "minLength": 1},
+          "rationale": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "status": {"enum": ["planned", "partial", "supported", "exception"]},
+    "certification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "status", "scenarios"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "status": {"$ref": "#/$defs/status"},
+        "scenarios": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

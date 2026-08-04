@@ -1,0 +1,31 @@
+{
+  "name": "errors-and-deletion",
+  "steps": [
+    {
+      "name": "missing subject",
+      "method": "GET",
+      "path": "/subjects/does-not-exist/versions/latest",
+      "expect": {"status": 404, "json": {"error_code": 40401, "message": "Subject 'does-not-exist' not found."}}
+    },
+    {
+      "name": "malformed registration",
+      "method": "POST",
+      "path": "/subjects/malformed-value/versions",
+      "body": {"schema": "not-json"},
+      "expect": {"status": 422}
+    },
+    {
+      "name": "register deletable schema",
+      "method": "POST",
+      "path": "/subjects/delete-value/versions",
+      "body": {"schema": "{\"type\":\"string\"}"},
+      "expect": {"status": 200}
+    },
+    {
+      "name": "soft delete subject",
+      "method": "DELETE",
+      "path": "/subjects/delete-value",
+      "expect": {"status": 200, "json": [1]}
+    }
+  ]
+}

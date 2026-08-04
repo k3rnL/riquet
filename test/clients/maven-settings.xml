@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+  <mirrors>
+    <mirror>
+      <id>central-direct</id>
+      <mirrorOf>central</mirrorOf>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </mirror>
+  </mirrors>
+  <profiles>
+    <profile>
+      <id>riquet-client-tests</id>
+      <activation><activeByDefault>true</activeByDefault></activation>
+      <repositories>
+        <repository><id>central</id><url>https://repo.maven.apache.org/maven2</url></repository>
+        <repository><id>confluent</id><url>https://packages.confluent.io/maven/</url></repository>
+      </repositories>
+    </profile>
+  </profiles>
+</settings>

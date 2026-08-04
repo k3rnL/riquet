@@ -1,0 +1,12 @@
+{
+  "name": "json-api",
+  "steps": [
+    {"name":"register json schema","method":"POST","path":"/subjects/json-value/versions","body":{"schemaType":"JSON","schema":"{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"integer\"}},\"required\":[\"id\"]}"},"expect":{"status":200}},
+    {"name":"get json schema","method":"GET","path":"/subjects/json-value/versions/1","expect":{"status":200}},
+    {"name":"lookup json schema","method":"POST","path":"/subjects/json-value","body":{"schemaType":"JSON","schema":"{ \"type\": \"object\", \"properties\": {\"id\": {\"type\": \"integer\"}}, \"required\": [\"id\"] }"},"expect":{"status":200}},
+    {"name":"json compatibility","method":"POST","path":"/compatibility/subjects/json-value/versions/latest?verbose=true","body":{"schemaType":"JSON","schema":"{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"integer\"},\"note\":{\"type\":\"string\"}},\"required\":[\"id\"]}"},"expect":{"status":200}},
+    {"name":"register json reference","method":"POST","path":"/subjects/json-common/versions","body":{"schemaType":"JSON","schema":"{\"type\":\"string\"}"},"expect":{"status":200}},
+    {"name":"register json external ref","method":"POST","path":"/subjects/json-envelope/versions","body":{"schemaType":"JSON","schema":"{\"type\":\"object\",\"properties\":{\"value\":{\"$ref\":\"common.json\"}}}","references":[{"name":"common.json","subject":"json-common","version":1}]},"expect":{"status":200}},
+    {"name":"json reverse reference","method":"GET","path":"/subjects/json-common/versions/1/referencedby","expect":{"status":200}}
+  ]
+}

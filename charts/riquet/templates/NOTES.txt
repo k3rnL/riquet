@@ -1,0 +1,9 @@
+Riquet is available inside the cluster at:
+  http://{{ include "riquet.fullname" . }}:{{ .Values.service.port }}
+
+Storage profile: {{ .Values.storage.backend }}
+{{- if eq .Values.storage.backend "pvc" }}
+PVC mode is a durable single-writer deployment and intentionally has one replica.
+{{- else }}
+Kafka mode runs {{ .Values.replicaCount }} replicas with fenced mutation authority.
+{{- end }}

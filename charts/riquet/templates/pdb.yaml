@@ -1,0 +1,13 @@
+{{- if and (eq .Values.storage.backend "kafka") .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "riquet.fullname" . }}
+  labels:
+    {{- include "riquet.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "riquet.selectorLabels" . | nindent 6 }}
+{{- end }}
